@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "dependencies": {
+    "vite": "^2.6.13"
+  },
+  "devDependencies": {
+    "jest": "^27.3.1"
+  }
+}
