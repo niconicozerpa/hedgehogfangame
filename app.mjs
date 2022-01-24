@@ -95,11 +95,11 @@ async function initGame(isTouchScreen = false) {
             nextGameFrame();
         }
 
-        if (!oldIsJumping && G.mainChar.isJumping) {
+        if (!oldIsJumping && G.mainChar.position === G.POS_JUMPING) {
             jumpAudio.play();
             oldIsJumping = true;
         }
-        oldIsJumping = G.mainChar.isJumping;
+        oldIsJumping = G.mainChar.position === G.POS_JUMPING;
 
 
         // Offset
@@ -165,13 +165,13 @@ async function initGame(isTouchScreen = false) {
 
         // Character
 
-        if (G.mainChar.speedX === 0 && !G.mainChar.isJumping) {
+        if (G.mainChar.speedX === 0 && G.mainChar.position !== G.POS_JUMPING) {
             sonicSpriteOffsetX = 0;
             sonicSpriteOffsetY = 0;
         } else {
             let maxFrames;
 
-            if (G.mainChar.isJumping) {
+            if (G.mainChar.position === G.POS_JUMPING) {
                 sonicSpriteOffsetY = 59 * 4;
                 maxFrames = 8;
 
@@ -398,13 +398,16 @@ async function initGame(isTouchScreen = false) {
         <div class="startScreen">
             <h1>Vanilla JS Sonic Prototype</h1>
             <div>By Nico Zerpa <a href="https://twitter.com/await_nico" target="_blank">@await_nico</a></div>
-            <hr>
+            <div>Remastered music by <a href="https://www.youtube.com/watch?v=XYRRMYgCtjc" target="_blank">Bouncy Glow's Music Room</a></div>
+            
+            <div class="pressEnter">
+                Press <strong>Enter</strong> or touch the screen to play.
+            </div>
+            
             <h2>Keyboard controls</h2>
             <div>Arrow keys: move character</div>
             <div>Space bar: Jump</div>
             <p>Touchscreen support available</p>
-            <hr>
-            Press <strong>Enter</strong> or touch the screen to play.
             <hr>
             <div class="disclaimer">
                 This prototype is a non-profit endeavor created by fans.
