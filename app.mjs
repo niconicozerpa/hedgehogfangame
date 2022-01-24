@@ -10,6 +10,7 @@ import jumpAudioMP3 from "./assets/jump.mp3";
 import musicOGG from "./assets/angelisland1.ogg";
 import musicMP3 from "./assets/angelisland1.mp3";
 import sonicURL from "./assets/sonic.webp";
+import { Actions, Positions } from "./character.mjs";
 
 
 
@@ -165,13 +166,13 @@ async function initGame(isTouchScreen = false) {
 
         // Character
 
-        if (G.mainChar.speedX === 0 && G.mainChar.position !== G.POS_JUMPING) {
+        if (G.mainChar.speedX === 0 && G.mainChar.position !== Positions.JUMPING) {
             sonicSpriteOffsetX = 0;
             sonicSpriteOffsetY = 0;
         } else {
             let maxFrames;
 
-            if (G.mainChar.position === G.POS_JUMPING) {
+            if (G.mainChar.position === Positions.JUMPING) {
                 sonicSpriteOffsetY = 59 * 4;
                 maxFrames = 8;
 
@@ -194,7 +195,7 @@ async function initGame(isTouchScreen = false) {
             }
         }
 
-        if (G.mainChar.direction == G.LEFT) {
+        if (G.mainChar.direction == Actions.LEFT) {
             context.save();
             context.scale(-1, 1);
         }
@@ -203,11 +204,11 @@ async function initGame(isTouchScreen = false) {
             sonicImage,
             sonicSpriteOffsetX, sonicSpriteOffsetY,
             59, 59,
-            G.mainChar.direction == G.LEFT ? -(G.mainChar.x - (G.mainChar.width - 1) / 2 - 19 - offsetX) - 59 : (G.mainChar.x - (G.mainChar.width - 1) / 2 - 22 - offsetX),
+            G.mainChar.direction == Actions.LEFT ? -(G.mainChar.x - (G.mainChar.width - 1) / 2 - 19 - offsetX) - 59 : (G.mainChar.x - (G.mainChar.width - 1) / 2 - 22 - offsetX),
             G.mainChar.y + (G.mainChar.height - 1) / 2 - 50,
             59, 59
         );
-        if (G.mainChar.direction == G.LEFT) {
+        if (G.mainChar.direction == Actions.LEFT) {
             context.restore();
         }
 
@@ -216,23 +217,23 @@ async function initGame(isTouchScreen = false) {
         context.beginPath();
 
         context.moveTo(
-            G.mainChar.x - (G.mainChar.width - 1) / 2,
+            G.mainChar.x - (G.mainChar.width - 1) / 2 - offsetX,
             G.mainChar.y - (G.mainChar.height - 1) / 2
         );
         context.lineTo(
-            G.mainChar.x + (G.mainChar.width - 1) / 2,
+            G.mainChar.x + (G.mainChar.width - 1) / 2 - offsetX,
             G.mainChar.y - (G.mainChar.height - 1) / 2
         );
         context.lineTo(
-            G.mainChar.x + (G.mainChar.width - 1) / 2,
+            G.mainChar.x + (G.mainChar.width - 1) / 2 - offsetX,
             G.mainChar.y + (G.mainChar.height - 1) / 2
         );
         context.lineTo(
-            G.mainChar.x - (G.mainChar.width - 1) / 2,
+            G.mainChar.x - (G.mainChar.width - 1) / 2 - offsetX,
             G.mainChar.y + (G.mainChar.height - 1) / 2
         );
         context.lineTo(
-            G.mainChar.x - (G.mainChar.width - 1) / 2,
+            G.mainChar.x - (G.mainChar.width - 1) / 2 - offsetX,
             G.mainChar.y - (G.mainChar.height - 1) / 2
         );
         context.stroke();
@@ -240,43 +241,43 @@ async function initGame(isTouchScreen = false) {
         context.fillStyle = "#00FF00";
         context.beginPath();
         context.fillRect(
-            G.mainChar.x, G.mainChar.y,
+            G.mainChar.x - offsetX, G.mainChar.y,
             1, 1
         );
-        const collisionPoints = G.getCollisionPoints(G.mainChar);
+        const collisionPoints = G.mainChar.getCollisionPoints();
         context.fillStyle = "#FFFFFF";
         context.fillRect(
-            G.mainChar.x + collisionPoints.leftTop[0],
+            G.mainChar.x + collisionPoints.leftTop[0] - offsetX,
             G.mainChar.y + collisionPoints.leftTop[1],
             1,
             1
         );
         context.fillRect(
-            G.mainChar.x + collisionPoints.left[0],
+            G.mainChar.x + collisionPoints.left[0] - offsetX,
             G.mainChar.y + collisionPoints.left[1],
             1,
             1
         );
         context.fillRect(
-            G.mainChar.x + collisionPoints.leftBottom[0],
+            G.mainChar.x + collisionPoints.leftBottom[0] - offsetX,
             G.mainChar.y + collisionPoints.leftBottom[1],
             1,
             1
         );
         context.fillRect(
-            G.mainChar.x + collisionPoints.rightTop[0],
+            G.mainChar.x + collisionPoints.rightTop[0] - offsetX,
             G.mainChar.y + collisionPoints.rightTop[1],
             1,
             1
         );
         context.fillRect(
-            G.mainChar.x + collisionPoints.right[0],
+            G.mainChar.x + collisionPoints.right[0] - offsetX,
             G.mainChar.y + collisionPoints.right[1],
             1,
             1
         );
         context.fillRect(
-            G.mainChar.x + collisionPoints.rightBottom[0],
+            G.mainChar.x + collisionPoints.rightBottom[0] - offsetX,
             G.mainChar.y + collisionPoints.rightBottom[1],
             1,
             1
@@ -313,13 +314,13 @@ async function initGame(isTouchScreen = false) {
     window.addEventListener("keydown", function(event) {
         switch (event.key) {
             case "ArrowRight":
-                keys.add(G.RIGHT);
+                keys.add(Actions.RIGHT);
                 break;
             case "ArrowLeft":
-                keys.add(G.LEFT);
+                keys.add(Actions.LEFT);
                 break;
             case " ":
-                keys.add(G.JUMP);
+                keys.add(Actions.JUMP);
                 break;
         }
     });
@@ -327,13 +328,13 @@ async function initGame(isTouchScreen = false) {
     window.addEventListener("keyup", function(event) {
         switch (event.key) {
             case "ArrowRight":
-                keys.delete(G.RIGHT);
+                keys.delete(Actions.RIGHT);
                 break;
             case "ArrowLeft":
-                keys.delete(G.LEFT);
+                keys.delete(Actions.LEFT);
                 break;
             case " ":
-                keys.delete(G.JUMP);
+                keys.delete(Actions.JUMP);
                 break;
         }
     });
@@ -346,10 +347,10 @@ async function initGame(isTouchScreen = false) {
         touchJumpButton.classList.add("touchJump");
 
         touchJumpButton.addEventListener("touchstart", function(event) {
-            keys.add(G.JUMP);
+            keys.add(Actions.JUMP);
         });
         touchJumpButton.addEventListener("touchend", function(event) {
-            keys.delete(G.JUMP);
+            keys.delete(Actions.JUMP);
         });
 
         document.body.append(touchJumpButton);
@@ -361,12 +362,12 @@ async function initGame(isTouchScreen = false) {
         touchLeftButton.addEventListener("touchstart", function(event) {
             event.stopPropagation();
             event.preventDefault();
-            keys.add(G.LEFT);
+            keys.add(Actions.LEFT);
         });
         touchLeftButton.addEventListener("touchend", function(event) {
             event.stopPropagation();
             event.preventDefault();
-            keys.delete(G.LEFT);
+            keys.delete(Actions.LEFT);
         });
 
         document.body.append(touchLeftButton);
@@ -378,12 +379,12 @@ async function initGame(isTouchScreen = false) {
         touchRightButton.addEventListener("touchstart", function(event) {
             event.stopPropagation();
             event.preventDefault();
-            keys.add(G.RIGHT);
+            keys.add(Actions.RIGHT);
         });
         touchRightButton.addEventListener("touchend", function(event) {
             event.stopPropagation();
             event.preventDefault();
-            keys.delete(G.RIGHT);
+            keys.delete(Actions.RIGHT);
         });
 
         document.body.append(touchRightButton);

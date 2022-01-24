@@ -1,6 +1,6 @@
-import * as Chr from "./character.mjs";
+import { createMainCharacter, Character, Actions } from "./character.mjs";
 
-const sonic = Chr.createMainCharacter(25, 100);
+const sonic = createMainCharacter(25, 100);
 
 
 function initGame(keys) {
@@ -8,24 +8,20 @@ function initGame(keys) {
 
         let direction = null;
 
-        if (keys.has(Chr.LEFT)) {
-            direction = Chr.LEFT;
-        } else if (keys.has(Chr.RIGHT)) {
-            direction = Chr.RIGHT;
+        if (keys.has(Actions.LEFT)) {
+            direction = Actions.LEFT;
+        } else if (keys.has(Actions.RIGHT)) {
+            direction = Actions.RIGHT;
         }
 
-        Chr.nextFrame(sonic, direction, keys.has(Chr.JUMP));
+        sonic.nextFrame(direction, keys.has(Actions.JUMP));
     };
     
 }
 
 const toExport = {
     mainChar: sonic,
-    initGame,
-    getCollisionPoints: Chr.getCollisionPoints,
-    LEFT: Chr.LEFT,
-    RIGHT: Chr.RIGHT,
-    JUMP: Chr.JUMP
+    initGame
 }
 
 

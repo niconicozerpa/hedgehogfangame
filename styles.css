@@ -43,6 +43,11 @@ div.startScreen a:hover {
     color: #EEE;
 }
 div.startScreen .disclaimer { font-size: 0.75rem; }
+div.startScreen .pressEnter {
+    border: 1px solid #FFF;
+    padding: 1em;
+    margin: 1em 0px;
+}
 button.touchJump {
     position: fixed;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
