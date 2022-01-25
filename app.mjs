@@ -7,10 +7,14 @@ import { WIDTH, WORLD_WIDTH, HEIGHT, FLOOR_Y_POS } from "./config.mjs";
 
 import jumpAudioOGG from "./assets/jump.ogg";
 import jumpAudioMP3 from "./assets/jump.mp3";
-import rollAudioOGG from "./assets/roll.ogg";
-import rollAudioMP3 from "./assets/roll.mp3";
-import brakeAudioOGG from "./assets/brake.ogg";
-import brakeAudioMP3 from "./assets/brake.mp3";
+import rollAudioOGG from "./assets/rolling.ogg";
+import rollAudioMP3 from "./assets/rolling.mp3";
+import brakeAudioOGG from "./assets/braking.ogg";
+import brakeAudioMP3 from "./assets/braking.mp3";
+import spindashOGG from "./assets/spindash.ogg";
+import spindashMP3 from "./assets/spindash.mp3";
+import spindashReleaseOGG from "./assets/spindash_release.ogg";
+import spindashReleaseMP3 from "./assets/spindash_release.mp3";
 import musicOGG from "./assets/angelisland1.ogg";
 import musicMP3 from "./assets/angelisland1.mp3";
 import { Actions, Positions } from "./character.mjs";
@@ -22,7 +26,9 @@ async function initGame(isTouchScreen = false) {
 
     const jumpAudio = setupAudioFile(jumpAudioOGG, jumpAudioMP3);
     const rollAudio = setupAudioFile(rollAudioOGG, rollAudioMP3);
-    const brakeAudio = setupAudioFile(brakeAudioOGG, brakeAudioMP3, 0.33);
+    const brakeAudio = setupAudioFile(brakeAudioOGG, brakeAudioMP3);
+    const spindashAudio = setupAudioFile(spindashOGG, spindashMP3);
+    const spindashReleaseAudio = setupAudioFile(spindashReleaseOGG, spindashReleaseMP3);
 
     {
         const musicAudio = document.createElement("audio");
@@ -84,9 +90,9 @@ async function initGame(isTouchScreen = false) {
         }
 
         if (oldPosition !== Positions.JUMPING && G.mainChar.position === Positions.JUMPING) {
-            jumpAudio.play();
+            playAudioEffect(jumpAudio);
         } else if (oldPosition !== Positions.ROLLING && G.mainChar.position === Positions.ROLLING) {
-            rollAudio.play();
+            playAudioEffect(oldPosition === Positions.SPINDASH ? spindashReleaseAudio : rollAudio);
         }
         oldPosition = G.mainChar.position;
 
@@ -155,7 +161,9 @@ async function initGame(isTouchScreen = false) {
         let animationType = "idle";
         if (G.mainChar.speedX === 0 && G.mainChar.position !== Positions.JUMPING) {
             
-            if (G.mainChar.lookingTo === Actions.DOWN) {
+            if (G.mainChar.position === Positions.SPINDASH) {
+                animationType = "spindash";
+            } else if (G.mainChar.lookingTo === Actions.DOWN) {
                 animationType = "lookDown";
             } else if (G.mainChar.lookingTo === Actions.UP) {
                 animationType = "lookUp";
@@ -165,7 +173,7 @@ async function initGame(isTouchScreen = false) {
                 animationType = "rolling";
             } else if (G.mainChar.isSkidding) {
                 animationType = "skidding";
-            } else if (Math.abs(G.mainChar.speedX) < G.mainChar.topSpeedX) {
+            } else if (Math.abs(G.mainChar.speedX) < G.mainChar.topRunSpeedX) {
                 animationType = "walking";
             } else {
                 animationType = "running";
@@ -176,9 +184,15 @@ async function initGame(isTouchScreen = false) {
             animationCount = -1;
             animationStepNumber = 0;
 
-            if (animationType === "skidding") {
-                brakeAudio.play();
+            switch (animationType) {
+                case "skidding":
+                    playAudioEffect(brakeAudio);
+                    break;
+                case "spindash":
+                    playAudioEffect(spindashAudio);
+                    break;
             }
+
         }
         
         let animationStep;
@@ -208,8 +222,8 @@ async function initGame(isTouchScreen = false) {
             }
         }
             
-        const sonicSpriteOffsetX = animationStep.offsetX * sonicSprites.width;
-        const sonicSpriteOffsetY = animationStep.offsetY * sonicSprites.height;
+        const [sonicSpriteOffsetX, sonicSpriteOffsetY] = animationStep.position;
+        // const [sonicSpriteOffsetX, sonicSpriteOffsetY] = animationStep.position;
 
         if (G.mainChar.direction == Actions.LEFT) {
             context.save();
@@ -483,6 +497,10 @@ function setupAudioFile(oggFile, mp3File, volume = 1) {
         return output;
     }
 } 
+function playAudioEffect(audioEl) {
+    audioEl.currentTime = 0;
+    audioEl.play();
+}
 
 
 (function startScreen() {

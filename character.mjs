@@ -11,7 +11,8 @@ export const Actions = {
 export const Positions = {
     STAND_UP: 0,
     JUMPING: 1,
-    ROLLING: 2
+    ROLLING: 2,
+    SPINDASH: 3
 }
 
 class CollisionPoints {
@@ -43,7 +44,8 @@ export function createMainCharacter(x, y) {
         decel: 0.5,
         airAccel: 0.09375,
         jumpForce: 6.5,
-        topSpeedX: 6,
+        topRunSpeedX: 6,
+        topSpeedX: 8,
 
         collisionPoints: new CollisionPoints({
             leftTop: [-9, -19],
@@ -79,6 +81,7 @@ export class Character {
     decel;
     friction = 0.046875;
     rollDecel = 0.125;
+    topRunSpeedX;
     topSpeedX;
     airAccel;
     jumpForce;
@@ -89,12 +92,14 @@ export class Character {
     collisionPoints;
     jumpingCollisionPoints;
     lookingTo = null;
+    spindashCount = 0;
 
     constructor({
         x, y,
         width, height,
         accel,
         decel,
+        topRunSpeedX,
         topSpeedX,
         airAccel,
         jumpForce,
@@ -107,6 +112,7 @@ export class Character {
         this.height = height;
         this.accel = accel;
         this.decel = decel;
+        this.topRunSpeedX = topRunSpeedX;
         this.topSpeedX = topSpeedX;
         this.airAccel = airAccel;
         this.jumpForce = jumpForce;
@@ -131,7 +137,7 @@ export class Character {
             this.speedX += this.decel;
         } else {
             this.isSkidding = false;
-            this.speedX = Math.min(Math.abs(this.speedX) + accel, this.topSpeedX);
+            this.speedX = Math.min(Math.abs(this.speedX) + accel, this.topRunSpeedX);
             if (direction === Actions.LEFT) {
                 this.speedX *= -1;
             }
@@ -240,6 +246,27 @@ export class Character {
         }
     }
 
+    #spindash() {
+
+        let dashSpeed = 8 + Math.floor(this.spindashCount) / 2;
+        if (this.direction === Actions.LEFT) {
+            dashSpeed *= -1;
+        }
+
+        this.speedX += dashSpeed;
+        this.#startRolling();
+        this.#collisionMoveX();
+    }
+
+    #startRolling() {
+        const maxYNow = Math.max(this.collisionPoints.leftBottom[1], this.collisionPoints.rightBottom[1]);
+        const maxYRoll = Math.max(this.jumpingCollisionPoints.leftBottom[1], this.jumpingCollisionPoints.rightBottom[1]);
+
+        this.y += Math.max(maxYRoll, maxYNow) - Math.min(maxYRoll, maxYNow);
+
+        this.position = Positions.ROLLING;
+    }
+
     nextFrame(actions) {
 
         const jumping = actions.has(Actions.JUMP);
@@ -253,25 +280,38 @@ export class Character {
         }
 
         if (jumping && this.position !== Positions.JUMPING) {
-            this.position = Positions.JUMPING;
-            this.speedY -= this.jumpForce;
+
+            if (actions.has(Actions.DOWN)) {
+                if (this.position !== Positions.SPINDASH) {
+                    this.position = Positions.SPINDASH;
+                    this.spindashCount = -1;
+                }
+            } else {
+                this.position = Positions.JUMPING;
+                this.speedY -= this.jumpForce;
+            }
+        }
+
+        if (this.position === Positions.SPINDASH) {
+            if (!actions.has(Actions.DOWN)) {
+                this.#spindash();
+            }
+            if (jumping) {
+                this.spindashCount = Math.min(8, this.spindashCount + 2);
+            } else {
+                this.spindashCount -= Math.floor(this.spindashCount / 0.125) / 256;
+            }
         }
 
         if (this.position === Positions.JUMPING && !jumping) {
             this.speedY = Math.max(-4, this.speedY);
         }
 
-        if (actions.has(Actions.DOWN) && this.position === Positions.STAND_UP && this.speedX !== 0) {
-            const maxYNow = Math.max(this.collisionPoints.leftBottom[1], this.collisionPoints.rightBottom[1]);
-            const maxYRoll = Math.max(this.jumpingCollisionPoints.leftBottom[1], this.jumpingCollisionPoints.rightBottom[1]);
-
-            this.y += Math.max(maxYRoll, maxYNow) - Math.min(maxYRoll, maxYNow);
-
-            this.position = Positions.ROLLING;
-
+        if (actions.has(Actions.DOWN) && this.position === Positions.STAND_UP && Math.abs(this.speedX) >= 0.5) {
+            this.#startRolling();
         }
 
-        if ([Actions.LEFT, Actions.RIGHT].includes(direction) && this.position !== Positions.ROLLING) {
+        if ([Actions.LEFT, Actions.RIGHT].includes(direction) && ![Positions.ROLLING, Positions.SPINDASH].includes(this.position)) {
             this.#pushX(direction);
         } else {
 
@@ -297,9 +337,9 @@ export class Character {
 
         this.#moveY();
 
-        if (this.speedX === 0 && actions.has(Actions.DOWN)) {
+        if (this.position != Positions.SPINDASH && this.speedX === 0 && actions.has(Actions.DOWN)) {
             this.lookingTo = Actions.DOWN;
-        } else if (this.speedX === 0 && actions.has(Actions.UP)) {
+        } else if (this.position != Positions.SPINDASH && this.speedX === 0 && actions.has(Actions.UP)) {
             this.lookingTo = Actions.UP;
         } else {
             this.lookingTo = null;
