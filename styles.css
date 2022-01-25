@@ -48,7 +48,7 @@ div.startScreen .pressEnter {
     padding: 1em;
     margin: 1em 0px;
 }
-button.touchJump {
+button.touchJump, button.touchDirPad {
     position: fixed;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     right: 2rem;
@@ -60,25 +60,43 @@ button.touchJump {
     border: 5px solid rgba(0, 0, 0, 0.5);
     background-color: rgba(255, 255, 255, 0.5);
 }
-button.touchLeft, button.touchRight {
-    position: fixed;
+
+button.touchDirPad {
     left: 2rem;
-    bottom: 2rem;
-    width: 4rem;
-    height: 4rem;
-    border-top-left-radius: 4rem;
-    border-bottom-left-radius: 4rem;
-    border-top-right-radius: 1rem;
-    border-bottom-right-radius: 1rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #000;
-    border: 5px solid rgba(0, 0, 0, 0.5);
-    background-color: rgba(255, 255, 255, 0.5);
+    right: auto;
+    width: 8rem;
+    height: 8rem;
+    border-radius: 8rem;
+    overflow: hidden;
 }
-button.touchRight {
-    left: 6rem;
-    border-top-left-radius: 1rem;
-    border-bottom-left-radius: 1rem;
-    border-top-right-radius: 4rem;
-    border-bottom-right-radius: 4rem;
+button.touchDirPad span.arrowTop,
+button.touchDirPad span.arrowLeft,
+button.touchDirPad span.arrowBottom,
+button.touchDirPad span.arrowRight {
+    position: absolute;
+    left: calc(50% - 0.75em);
+    top: calc(50% - 0.75em);
+    width: 1.5em;
+    height: 1.5em;
+    display: inline-block;
+    vertical-align: center;
+    text-align: center;
+    color: #000;
+}
+button.touchDirPad span.arrowTop {
+    transform: rotate(-90deg);
+    top: 0.5em;
+}
+button.touchDirPad span.arrowRight {
+    left: auto;
+    right: 0.5em;
+}
+button.touchDirPad span.arrowBottom {
+    transform: rotate(90deg);
+    top: auto;
+    bottom: 0.5em;
+}
+button.touchDirPad span.arrowLeft {
+    transform: rotate(180deg);
+    left: 0.5em;
 }

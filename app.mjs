@@ -9,6 +9,8 @@ import jumpAudioOGG from "./assets/jump.ogg";
 import jumpAudioMP3 from "./assets/jump.mp3";
 import rollAudioOGG from "./assets/roll.ogg";
 import rollAudioMP3 from "./assets/roll.mp3";
+import brakeAudioOGG from "./assets/brake.ogg";
+import brakeAudioMP3 from "./assets/brake.mp3";
 import musicOGG from "./assets/angelisland1.ogg";
 import musicMP3 from "./assets/angelisland1.mp3";
 import { Actions, Positions } from "./character.mjs";
@@ -20,6 +22,7 @@ async function initGame(isTouchScreen = false) {
 
     const jumpAudio = setupAudioFile(jumpAudioOGG, jumpAudioMP3);
     const rollAudio = setupAudioFile(rollAudioOGG, rollAudioMP3);
+    const brakeAudio = setupAudioFile(brakeAudioOGG, brakeAudioMP3, 0.33);
 
     {
         const musicAudio = document.createElement("audio");
@@ -68,7 +71,7 @@ async function initGame(isTouchScreen = false) {
     let offsetX = 0;
 
     let animationCount = 0;
-    let animationStep = 0;
+    let animationStepNumber = 0;
     let currentAnimation = sonicSprites.idle;
 
     window.requestAnimationFrame(function reqAnimFrame() {
@@ -158,9 +161,10 @@ async function initGame(isTouchScreen = false) {
                 animationType = "lookUp";
             }
         } else {
-            
             if ([Positions.JUMPING, Positions.ROLLING].includes(G.mainChar.position)) {
                 animationType = "rolling";
+            } else if (G.mainChar.isSkidding) {
+                animationType = "skidding";
             } else if (Math.abs(G.mainChar.speedX) < G.mainChar.topSpeedX) {
                 animationType = "walking";
             } else {
@@ -170,12 +174,22 @@ async function initGame(isTouchScreen = false) {
 
         if (currentAnimation != sonicSprites[animationType]) {
             animationCount = -1;
-            animationStep = 0;
+            animationStepNumber = 0;
+
+            if (animationType === "skidding") {
+                brakeAudio.play();
+            }
         }
         
+        let animationStep;
         currentAnimation = sonicSprites[animationType];
-
-        let duration = currentAnimation[animationStep].duration;
+        if (currentAnimation instanceof Function) {
+            animationStep = currentAnimation(animationStepNumber);
+        } else {
+            animationStep = currentAnimation[animationStepNumber];
+        }
+        
+        let duration = animationStep.duration;
         if (duration instanceof Function) {
             duration = duration(G.mainChar.speedX);
         }
@@ -186,16 +200,16 @@ async function initGame(isTouchScreen = false) {
 
             if (animationCount >= duration) {
                 animationCount = -1;
-                animationStep++;
+                animationStepNumber++;
 
-                if (animationStep >= currentAnimation.length) {
-                    animationStep = 0;
+                if (!(currentAnimation instanceof Function) && animationStepNumber >= currentAnimation.length) {
+                    animationStepNumber = 0;
                 }
             }
         }
             
-        const sonicSpriteOffsetX = currentAnimation[animationStep].offsetX * sonicSprites.width;
-        const sonicSpriteOffsetY = currentAnimation[animationStep].offsetY * sonicSprites.height;
+        const sonicSpriteOffsetX = animationStep.offsetX * sonicSprites.width;
+        const sonicSpriteOffsetY = animationStep.offsetY * sonicSprites.height;
 
         if (G.mainChar.direction == Actions.LEFT) {
             context.save();
@@ -369,24 +383,61 @@ async function initGame(isTouchScreen = false) {
 
         document.body.append(touchJumpButton);
 
-        const touchLeftButton = document.createElement("button");
-        touchLeftButton.textContent = "L";
-        touchLeftButton.classList.add("touchLeft");
+        const touchDirPadButton = document.createElement("button");
+        
+        for (const direction of ["Left", "Top", "Bottom", "Right"]) {
+            const arrow = document.createElement("span");
+            arrow.classList.add(`arrow${direction}`);
+            arrow.textContent = "▶";
+            touchDirPadButton.append(arrow);
+        }
 
-        touchLeftButton.addEventListener("touchstart", function(event) {
+        touchDirPadButton.classList.add("touchDirPad");
+
+        document.body.append(touchDirPadButton);
+
+        function handleTouchEvents(event) {
             event.stopPropagation();
             event.preventDefault();
-            keys.add(Actions.LEFT);
-        });
-        touchLeftButton.addEventListener("touchend", function(event) {
+            const touch = event.touches[0];
+
+            const posX = Math.round((touch.pageX - touchDirPadButton.offsetLeft) / touchDirPadButton.offsetWidth * 100);
+            const posY = Math.round((touch.pageY - touchDirPadButton.offsetTop) / touchDirPadButton.offsetHeight * 100);
+
+            const keysToAdd = [];
+            if (posX <= 40) {
+                keysToAdd.push(Actions.LEFT);
+            }
+            if (posX >= 60) {
+                keysToAdd.push(Actions.RIGHT);
+            }
+            if (posY <= 40) {
+                keysToAdd.push(Actions.UP);
+            }
+            if (posY >= 60) {
+                keysToAdd.push(Actions.DOWN);
+            }
+
+            for (const action of [Actions.LEFT, Actions.RIGHT, Actions.UP, Actions.DOWN]) {
+                if (keysToAdd.includes(action)) {
+                    keys.add(action);
+                } else {
+                    keys.delete(action);
+                }
+            }
+
+        }
+        touchDirPadButton.addEventListener("touchstart", handleTouchEvents);
+        touchDirPadButton.addEventListener("touchmove", handleTouchEvents);
+        touchDirPadButton.addEventListener("touchend", function(event) {
             event.stopPropagation();
             event.preventDefault();
-            keys.delete(Actions.LEFT);
+            for (const action of [Actions.LEFT, Actions.RIGHT, Actions.UP, Actions.DOWN]) {
+                keys.delete(action);
+            }
         });
 
-        document.body.append(touchLeftButton);
-
-        const touchRightButton = document.createElement("button");
+        /*const touchRightButton = document.createElement("button");
         touchRightButton.textContent = "R";
         touchRightButton.classList.add("touchRight");
 
@@ -401,11 +452,11 @@ async function initGame(isTouchScreen = false) {
             keys.delete(Actions.RIGHT);
         });
 
-        document.body.append(touchRightButton);
+        document.body.append(touchRightButton);*/
     }
 }
 
-function setupAudioFile(oggFile, mp3File) {
+function setupAudioFile(oggFile, mp3File, volume = 1) {
     const output = document.createElement("audio");
     {
         output.setAttribute("preload", "auto");
@@ -417,6 +468,8 @@ function setupAudioFile(oggFile, mp3File) {
         const sourceOGG = document.createElement("source");
         sourceOGG.setAttribute("type", "audio/ogg");
         sourceOGG.setAttribute("src", oggFile);
+
+        output.volume = volume;
 
         output.append(sourceOGG);
         document.body.append(output);

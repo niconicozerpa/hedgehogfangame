@@ -83,10 +83,9 @@ export class Character {
     airAccel;
     jumpForce;
     gravity = 0.21875;
-    animationCount = 0;
-    changeAnimation = false;
     direction = Actions.RIGHT;
     position = Positions.STAND_UP;
+    isSkidding = false;
     collisionPoints;
     jumpingCollisionPoints;
     lookingTo = null;
@@ -121,10 +120,17 @@ export class Character {
         const accel = Positions.JUMPING === this.position ? this.airAccel : this.accel;
         
         if (direction === Actions.LEFT && this.speedX > 0) {
+            if (!this.isSkidding) {
+                this.isSkidding = this.speedX >= 4;
+            }
             this.speedX -= this.decel;
         } else if (direction === Actions.RIGHT && this.speedX < 0) {
+            if (!this.isSkidding) {
+                this.isSkidding = this.speedX <= -4;
+            }
             this.speedX += this.decel;
         } else {
+            this.isSkidding = false;
             this.speedX = Math.min(Math.abs(this.speedX) + accel, this.topSpeedX);
             if (direction === Actions.LEFT) {
                 this.speedX *= -1;
@@ -246,10 +252,6 @@ export class Character {
             direction = Actions.RIGHT;
         }
 
-        if (this.speedX === 0 && this.position !== Positions.JUMPING) {
-            this.animationCount = 0;
-        }
-
         if (jumping && this.position !== Positions.JUMPING) {
             this.position = Positions.JUMPING;
             this.speedY -= this.jumpForce;
@@ -293,34 +295,12 @@ export class Character {
             }
         }
 
-        this.changeAnimation = false;
-
-        if (this.speedX != 0 || this.position === Positions.JUMPING) {
-            let duration;
-
-            if ([Positions.ROLLING, Positions.JUMPING].includes(this.position)) {
-                duration = Math.floor(Math.max(0, 4 - Math.abs(this.speedX)));
-            } else {
-                duration = Math.floor(Math.max(0, 6 - Math.abs(this.speedX)));
-            }
-
-            if (this.animationCount > duration) {
-                this.animationCount = 0;
-                this.changeAnimation = true;
-            } else {
-                this.animationCount++;
-            }
-        }
-
         this.#moveY();
 
-        let duration = 0;
         if (this.speedX === 0 && actions.has(Actions.DOWN)) {
             this.lookingTo = Actions.DOWN;
-            duration = 2;
         } else if (this.speedX === 0 && actions.has(Actions.UP)) {
             this.lookingTo = Actions.UP;
-            duration = 2;
         } else {
             this.lookingTo = null;
         }
