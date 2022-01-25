@@ -3,7 +3,9 @@ import { WORLD_WIDTH, FLOOR_Y_POS } from "./config.mjs";
 export const Actions = {
     LEFT: 0,
     RIGHT: 1,
-    JUMP: 2
+    DOWN: 2,
+    UP: 3,
+    JUMP: 4
 }
 
 export const Positions = {
@@ -76,6 +78,7 @@ export class Character {
     accel;
     decel;
     friction = 0.046875;
+    rollDecel = 0.125;
     topSpeedX;
     airAccel;
     jumpForce;
@@ -86,6 +89,7 @@ export class Character {
     position = Positions.STAND_UP;
     collisionPoints;
     jumpingCollisionPoints;
+    lookingTo = null;
 
     constructor({
         x, y,
@@ -111,10 +115,10 @@ export class Character {
         this.jumpingCollisionPoints = jumpingCollisionPoints;
     }
 
-    #moveX(direction = Actions.RIGHT) {
+    #pushX(direction = Actions.RIGHT) {
         this.direction = direction;
 
-        const accel = this.position === Positions.JUMPING ? this.airAccel : this.accel;
+        const accel = Positions.JUMPING === this.position ? this.airAccel : this.accel;
         
         if (direction === Actions.LEFT && this.speedX > 0) {
             this.speedX -= this.decel;
@@ -126,7 +130,7 @@ export class Character {
                 this.speedX *= -1;
             }
         }
-
+    
         this.#collisionMoveX();
     }
 
@@ -188,10 +192,12 @@ export class Character {
             }
         }
 
-        
-
         if (!collision) {
             this.x += this.speedX;
+        }
+
+        if (this.speedX === 0 && this.position === Positions.ROLLING) {
+            this.position = Positions.STAND_UP;
         }
     }
     
@@ -205,25 +211,41 @@ export class Character {
         let leftBottomY = [this.speedY, this.y, collisionPoints.leftBottom[1]].map(x => parseFloat(x)).reduce((acc, n) => acc + n, 0);
         let rightBottomY = [this.speedY, this.y, collisionPoints.rightBottom[1]].map(x => parseFloat(x)).reduce((acc, n) => acc + n, 0);
 
+        const origPosition = this.position;
 
         if (leftBottomY + 1 >= maxY) {
-            if (this.position === Positions.JUMPING) {
+            if (origPosition === Positions.JUMPING) {
                 this.position = Positions.STAND_UP;
+                this.y = maxY - this.collisionPoints.leftBottom[1] - 1;
+            } else {
+                this.y = maxY - collisionPoints.leftBottom[1] - 1;
             }
-            this.y = maxY - collisionPoints.leftBottom[1] - 1;
             this.speedY = 0;
         } if (rightBottomY + 1 >= maxY) {
-            if (this.position === Positions.JUMPING) {
+            if (origPosition === Positions.JUMPING) {
                 this.position = Positions.STAND_UP;
+                this.y = maxY - this.collisionPoints.rightBottom[1] - 1;
+            } else {
+                this.y = maxY - collisionPoints.rightBottom[1] - 1;
             }
-            this.y = maxY - collisionPoints.rightBottom[1] - 1;
             this.speedY = 0;        
         } else {
             this.y += this.speedY;
         }
     }
 
-    nextFrame(direction = null, jumping = false) {
+    nextFrame(actions) {
+
+        const jumping = actions.has(Actions.JUMP);
+        let direction = null;
+
+        if (actions.has(Actions.LEFT)) {
+            direction = Actions.LEFT;
+        }
+        if (actions.has(Actions.RIGHT)) {
+            direction = Actions.RIGHT;
+        }
+
         if (this.speedX === 0 && this.position !== Positions.JUMPING) {
             this.animationCount = 0;
         }
@@ -237,15 +259,34 @@ export class Character {
             this.speedY = Math.max(-4, this.speedY);
         }
 
-        if ([Actions.LEFT, Actions.RIGHT].includes(direction)) {
-            this.#moveX(direction);
+        if (actions.has(Actions.DOWN) && this.position === Positions.STAND_UP && this.speedX !== 0) {
+            const maxYNow = Math.max(this.collisionPoints.leftBottom[1], this.collisionPoints.rightBottom[1]);
+            const maxYRoll = Math.max(this.jumpingCollisionPoints.leftBottom[1], this.jumpingCollisionPoints.rightBottom[1]);
+
+            this.y += Math.max(maxYRoll, maxYNow) - Math.min(maxYRoll, maxYNow);
+
+            this.position = Positions.ROLLING;
+
+        }
+
+        if ([Actions.LEFT, Actions.RIGHT].includes(direction) && this.position !== Positions.ROLLING) {
+            this.#pushX(direction);
         } else {
 
             if (this.speedX !== 0) {
+
+                let friction = this.friction / (this.position === Positions.ROLLING ? 2 : 1);
+
+                if (this.speedX > 0 && direction === Actions.LEFT
+                    || this.speedX <0 && direction === Actions.RIGHT
+                ) {
+                    friction += this.rollDecel;
+                }
+
                 if (this.speedX > 0) {
-                    this.speedX = Math.max(0, this.speedX - this.friction);
+                    this.speedX = Math.max(0, this.speedX - friction);
                 } else if (this.speedX < 0) {
-                    this.speedX = Math.min(0, this.speedX + this.friction);
+                    this.speedX = Math.min(0, this.speedX + friction);
                 }
 
                 this.#collisionMoveX();
@@ -257,7 +298,7 @@ export class Character {
         if (this.speedX != 0 || this.position === Positions.JUMPING) {
             let duration;
 
-            if (this.position === Positions.JUMPING) {
+            if ([Positions.ROLLING, Positions.JUMPING].includes(this.position)) {
                 duration = Math.floor(Math.max(0, 4 - Math.abs(this.speedX)));
             } else {
                 duration = Math.floor(Math.max(0, 6 - Math.abs(this.speedX)));
@@ -272,9 +313,20 @@ export class Character {
         }
 
         this.#moveY();
+
+        let duration = 0;
+        if (this.speedX === 0 && actions.has(Actions.DOWN)) {
+            this.lookingTo = Actions.DOWN;
+            duration = 2;
+        } else if (this.speedX === 0 && actions.has(Actions.UP)) {
+            this.lookingTo = Actions.UP;
+            duration = 2;
+        } else {
+            this.lookingTo = null;
+        }
     }
 
     getCollisionPoints() {
-        return this.position === Positions.JUMPING ? this.jumpingCollisionPoints : this.collisionPoints;
+        return [Positions.ROLLING, Positions.JUMPING].includes(this.position) ? this.jumpingCollisionPoints : this.collisionPoints;
     }
 }

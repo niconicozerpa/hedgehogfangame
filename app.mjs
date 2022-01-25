@@ -7,36 +7,19 @@ import { WIDTH, WORLD_WIDTH, HEIGHT, FLOOR_Y_POS } from "./config.mjs";
 
 import jumpAudioOGG from "./assets/jump.ogg";
 import jumpAudioMP3 from "./assets/jump.mp3";
+import rollAudioOGG from "./assets/roll.ogg";
+import rollAudioMP3 from "./assets/roll.mp3";
 import musicOGG from "./assets/angelisland1.ogg";
 import musicMP3 from "./assets/angelisland1.mp3";
-import sonicURL from "./assets/sonic.webp";
 import { Actions, Positions } from "./character.mjs";
+import { sonicSprites } from "./sprites.mjs";
 
 
 
 async function initGame(isTouchScreen = false) {
 
-    const jumpAudio = document.createElement("audio");
-    {
-        jumpAudio.setAttribute("preload", "auto");
-
-        const sourceMP3 = document.createElement("source");
-        sourceMP3.setAttribute("type", "audio/mp3");
-        sourceMP3.setAttribute("src", jumpAudioMP3);
-
-        const sourceOGG = document.createElement("source");
-        sourceOGG.setAttribute("type", "audio/ogg");
-        sourceOGG.setAttribute("src", jumpAudioOGG);
-
-        jumpAudio.append(sourceOGG);
-        document.body.append(jumpAudio);
-
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioTrack = audioContext.createMediaElementSource(jumpAudio);
-
-
-        audioTrack.connect(audioContext.destination);
-    }
+    const jumpAudio = setupAudioFile(jumpAudioOGG, jumpAudioMP3);
+    const rollAudio = setupAudioFile(rollAudioOGG, rollAudioMP3);
 
     {
         const musicAudio = document.createElement("audio");
@@ -72,21 +55,22 @@ async function initGame(isTouchScreen = false) {
     document.body.append(canvas);
 
     const context = canvas.getContext("2d");
-    const sonicImage = await importImage(sonicURL);
+    const sonicImage = await importImage(sonicSprites.fileName);
     const keys = new Set();
-
-
-    let sonicSpriteOffsetX = 0;
-    let sonicSpriteOffsetY = 0;
 
 
     const nextGameFrame = G.initGame(keys);
     
     
-    let oldIsJumping = false;
+    let oldPosition = null;
 
     let firstFrame = true;
     let offsetX = 0;
+
+    let animationCount = 0;
+    let animationStep = 0;
+    let currentAnimation = sonicSprites.idle;
+
     window.requestAnimationFrame(function reqAnimFrame() {
 
         if (firstFrame) {
@@ -96,11 +80,12 @@ async function initGame(isTouchScreen = false) {
             nextGameFrame();
         }
 
-        if (!oldIsJumping && G.mainChar.position === G.POS_JUMPING) {
+        if (oldPosition !== Positions.JUMPING && G.mainChar.position === Positions.JUMPING) {
             jumpAudio.play();
-            oldIsJumping = true;
+        } else if (oldPosition !== Positions.ROLLING && G.mainChar.position === Positions.ROLLING) {
+            rollAudio.play();
         }
-        oldIsJumping = G.mainChar.position === G.POS_JUMPING;
+        oldPosition = G.mainChar.position;
 
 
         // Offset
@@ -163,37 +148,54 @@ async function initGame(isTouchScreen = false) {
         context.stroke();
 
 
-
         // Character
-
+        let animationType = "idle";
         if (G.mainChar.speedX === 0 && G.mainChar.position !== Positions.JUMPING) {
-            sonicSpriteOffsetX = 0;
-            sonicSpriteOffsetY = 0;
-        } else {
-            let maxFrames;
-
-            if (G.mainChar.position === Positions.JUMPING) {
-                sonicSpriteOffsetY = 59 * 4;
-                maxFrames = 8;
-
-            } else if (Math.abs(G.mainChar.speedX) < G.mainChar.topSpeedX) {
-                sonicSpriteOffsetY = 59;
-                maxFrames = 8;
-            } else {
-                sonicSpriteOffsetY = 59 * 2;
-                maxFrames = 4;
-            }
             
+            if (G.mainChar.lookingTo === Actions.DOWN) {
+                animationType = "lookDown";
+            } else if (G.mainChar.lookingTo === Actions.UP) {
+                animationType = "lookUp";
+            }
+        } else {
+            
+            if ([Positions.JUMPING, Positions.ROLLING].includes(G.mainChar.position)) {
+                animationType = "rolling";
+            } else if (Math.abs(G.mainChar.speedX) < G.mainChar.topSpeedX) {
+                animationType = "walking";
+            } else {
+                animationType = "running";
+            }
+        }
 
-            if (G.mainChar.changeAnimation) {
-                
-                sonicSpriteOffsetX += 59;
-                
-                if (sonicSpriteOffsetX >= 59 * maxFrames) {
-                    sonicSpriteOffsetX = 0;
+        if (currentAnimation != sonicSprites[animationType]) {
+            animationCount = -1;
+            animationStep = 0;
+        }
+        
+        currentAnimation = sonicSprites[animationType];
+
+        let duration = currentAnimation[animationStep].duration;
+        if (duration instanceof Function) {
+            duration = duration(G.mainChar.speedX);
+        }
+
+
+        if (duration !== Infinity) {
+            animationCount++;
+
+            if (animationCount >= duration) {
+                animationCount = -1;
+                animationStep++;
+
+                if (animationStep >= currentAnimation.length) {
+                    animationStep = 0;
                 }
             }
         }
+            
+        const sonicSpriteOffsetX = currentAnimation[animationStep].offsetX * sonicSprites.width;
+        const sonicSpriteOffsetY = currentAnimation[animationStep].offsetY * sonicSprites.height;
 
         if (G.mainChar.direction == Actions.LEFT) {
             context.save();
@@ -319,6 +321,12 @@ async function initGame(isTouchScreen = false) {
             case "ArrowLeft":
                 keys.add(Actions.LEFT);
                 break;
+            case "ArrowDown":
+                keys.add(Actions.DOWN);
+                break;
+            case "ArrowUp":
+                keys.add(Actions.UP);
+                break;
             case " ":
                 keys.add(Actions.JUMP);
                 break;
@@ -332,6 +340,12 @@ async function initGame(isTouchScreen = false) {
                 break;
             case "ArrowLeft":
                 keys.delete(Actions.LEFT);
+                break;
+            case "ArrowDown":
+                keys.delete(Actions.DOWN);
+                break;
+            case "ArrowUp":
+                keys.delete(Actions.UP);
                 break;
             case " ":
                 keys.delete(Actions.JUMP);
@@ -390,6 +404,32 @@ async function initGame(isTouchScreen = false) {
         document.body.append(touchRightButton);
     }
 }
+
+function setupAudioFile(oggFile, mp3File) {
+    const output = document.createElement("audio");
+    {
+        output.setAttribute("preload", "auto");
+
+        const sourceMP3 = document.createElement("source");
+        sourceMP3.setAttribute("type", "audio/mp3");
+        sourceMP3.setAttribute("src", mp3File);
+
+        const sourceOGG = document.createElement("source");
+        sourceOGG.setAttribute("type", "audio/ogg");
+        sourceOGG.setAttribute("src", oggFile);
+
+        output.append(sourceOGG);
+        document.body.append(output);
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioTrack = audioContext.createMediaElementSource(output);
+
+
+        audioTrack.connect(audioContext.destination);
+
+        return output;
+    }
+} 
 
 
 (function startScreen() {
