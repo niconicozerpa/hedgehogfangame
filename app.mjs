@@ -36,7 +36,7 @@ async function initGame(isTouchScreen = false) {
         musicAudio.setAttribute("preload", "auto");
 
         musicAudio.loop = true;
-        musicAudio.volume = 0.55;
+        musicAudio.volume = 1;
         
         const sourceMP3 = document.createElement("source");
         sourceMP3.setAttribute("type", "audio/mp3");
@@ -65,7 +65,32 @@ async function initGame(isTouchScreen = false) {
 
     const context = canvas.getContext("2d");
     const sonicImage = await importImage(sonicSprites.fileName);
-    const keys = new Set();
+
+    const extraImages = {};
+
+    for (const index in sonicSprites.extraImages) {
+        extraImages[index] = await importImage(sonicSprites.extraImages[index]);
+    }
+    
+
+    const keys = (function() {
+        const keys = {};
+        
+        return {
+            add(key) {
+                keys[key] = Math.floor(Date.now() / 1000);
+            },
+            has(key) {
+               return typeof keys[key] !== "undefined";
+            },
+            delete(key) {
+                delete keys[key];
+            },
+            get(key) {
+                return keys[key];
+            }
+        }
+    })();
 
 
     const nextGameFrame = G.initGame(keys);
@@ -73,27 +98,33 @@ async function initGame(isTouchScreen = false) {
     
     let oldPosition = null;
 
-    let firstFrame = true;
     let offsetX = 0;
 
     let animationCount = 0;
     let animationStepNumber = 0;
     let currentAnimation = sonicSprites.idle;
+    let lastJumpTime = 0;
+
+    let extraAnimationOffset = 0;
+    let extraAnimationCount = 0;
 
     window.requestAnimationFrame(function reqAnimFrame() {
 
-        if (firstFrame) {
-            document.documentElement.scrollLeft = 0;
-            firstFrame = false;
-        } else {
-            nextGameFrame();
-        }
+        nextGameFrame();
 
         if (oldPosition !== Positions.JUMPING && G.mainChar.position === Positions.JUMPING) {
             playAudioEffect(jumpAudio);
         } else if (oldPosition !== Positions.ROLLING && G.mainChar.position === Positions.ROLLING) {
             playAudioEffect(oldPosition === Positions.SPINDASH ? spindashReleaseAudio : rollAudio);
+        } else {
+            
+            if (G.mainChar.position === Positions.SPINDASH && keys.has(Actions.JUMP) && keys.get(Actions.JUMP) !== lastJumpTime) {
+                playAudioEffect(spindashAudio);
+                animationStepNumber = 0;
+                animationCount = 0;
+            }
         }
+        lastJumpTime = keys.get(Actions.JUMP);
         oldPosition = G.mainChar.position;
 
 
@@ -223,8 +254,7 @@ async function initGame(isTouchScreen = false) {
         }
             
         const [sonicSpriteOffsetX, sonicSpriteOffsetY] = animationStep.position;
-        // const [sonicSpriteOffsetX, sonicSpriteOffsetY] = animationStep.position;
-
+        
         if (G.mainChar.direction == Actions.LEFT) {
             context.save();
             context.scale(-1, 1);
@@ -234,10 +264,45 @@ async function initGame(isTouchScreen = false) {
             sonicImage,
             sonicSpriteOffsetX, sonicSpriteOffsetY,
             59, 59,
-            G.mainChar.direction == Actions.LEFT ? -(G.mainChar.x - (G.mainChar.width - 1) / 2 - 19 - offsetX) - 59 : (G.mainChar.x - (G.mainChar.width - 1) / 2 - 22 - offsetX),
-            G.mainChar.y + (G.mainChar.height - 1) / 2 - 50,
+            Math.round(G.mainChar.direction == Actions.LEFT ? -(G.mainChar.x - (G.mainChar.width - 1) / 2 - 19 - offsetX) - 59 : (G.mainChar.x - (G.mainChar.width - 1) / 2 - 22 - offsetX)),
+            Math.round(G.mainChar.y + (G.mainChar.height - 1) / 2 - 50),
             59, 59
         );
+
+        if (animationStep.extraImage) {
+            const imageObject = extraImages[animationStep.extraImage.key];
+            const [width, height] = animationStep.extraImage.dimensions;
+            const [left, top] = animationStep.extraImage.position;
+
+            let drawImageWidth = G.mainChar.x - width + left - offsetX;
+            if (G.mainChar.direction === Actions.LEFT) {
+                drawImageWidth *= -1;
+                drawImageWidth -= G.mainChar.width;
+                drawImageWidth -= width;
+            }
+            context.drawImage(
+                imageObject,
+                extraAnimationOffset, 0,
+                ...animationStep.extraImage.dimensions,
+                Math.round(drawImageWidth),
+                Math.round(G.mainChar.y - height + top),
+                ...animationStep.extraImage.dimensions
+            );
+
+            extraAnimationCount++;
+
+            if (extraAnimationCount >= 2) {
+                extraAnimationCount = 0;
+                extraAnimationOffset += animationStep.extraImage.dimensions[0];
+                if (extraAnimationOffset >= imageObject.naturalWidth) {
+                    extraAnimationOffset = 0;
+                }
+            }
+        } else {
+            extraAnimationOffset = 0;
+            extraAnimationCount = 0;
+        }
+
         if (G.mainChar.direction == Actions.LEFT) {
             context.restore();
         }

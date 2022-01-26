@@ -1,18 +1,39 @@
 import sonicURL from "./assets/sonic.webp";
+import spindashDustURL from "./assets/spindash_dust.webp";
 
 const speedAnimation = (val, speedX) => Math.floor(Math.max(0, val - Math.abs(speedX)));
 
 class Sprite {
     position;
-    centerOffset;
+    centerOffset = [50, 50];
     duration;
+    extraImage = null;
     #dimensions = null;
 
-    constructor([dimensionsWidth, dimensionsHeight], [positionX, positionY], duration = Infinity, [centerOffsetX, centerOffsetY] = [50, 50]) {
+    constructor(
+        [dimensionsWidth, dimensionsHeight],
+        [positionX, positionY],
+        duration = Infinity
+    ) {
         this.position = [positionX, positionY],
-        this.centerOffset = [centerOffsetX, centerOffsetY],
         this.duration = duration;
         this.#dimensions = [dimensionsWidth, dimensionsHeight];
+    }
+
+    centerOffset(x, y) {
+        this.centerOffset = [x, y];
+        return this;
+    }
+
+    setExtraImage(key, [width, height], [positionX, positionY], duration = 1) {
+        this.extraImage = {
+            key,
+            duration: duration,
+            dimensions: [width, height],
+            position: [positionX, positionY]
+        };
+
+        return this;
     }
 
     get dimensions() {
@@ -27,6 +48,11 @@ const sonicDimensions = [59, 59];
 
 export const sonicSprites = {
     fileName: sonicURL,
+
+    extraImages: {
+        spindashDust: spindashDustURL
+    },
+
     idle: (step) => {
         if (step === 0) {
             return new Sprite(sonicDimensions, [0, 0], 180);
@@ -70,10 +96,10 @@ export const sonicSprites = {
         new Sprite(sonicDimensions, [59, 59 * 5])
     ],
     spindash: [0, 1, 2, 3, 4,]
-        .map(number => new Sprite(sonicDimensions, [59 * number, 59 * 8], 1))
+        .map(number => new Sprite(sonicDimensions, [59 * number, 59 * 8], 1).setExtraImage("spindashDust", [48, 48], [14, 20], 2))
         .reduce((acc, item) => {
             acc.push(item);
-            acc.push(new Sprite(sonicDimensions, [59 * 5, 59 * 8], 1));
+            acc.push(new Sprite(sonicDimensions, [59 * 5, 59 * 8], 1).setExtraImage("spindashDust", [48, 48], [14, 20], 2));
             return acc;
         }, [])
 };

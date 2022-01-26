@@ -270,6 +270,7 @@ export class Character {
     nextFrame(actions) {
 
         const jumping = actions.has(Actions.JUMP);
+
         let direction = null;
 
         if (actions.has(Actions.LEFT)) {
