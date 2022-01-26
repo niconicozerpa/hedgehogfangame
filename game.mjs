@@ -1,6 +1,6 @@
 import { createMainCharacter } from "./character.mjs";
 
-const sonic = createMainCharacter(25, 100);
+const sonic = createMainCharacter(200, 136);
 
 
 function initGame(actions) {

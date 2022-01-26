@@ -318,7 +318,12 @@ export class Character {
 
             if (this.speedX !== 0) {
 
-                let friction = this.friction / (this.position === Positions.ROLLING ? 2 : 1);
+                let friction;
+                if (this.position === Positions.JUMPING) {
+                    friction = 0;
+                } else {
+                    friction = this.friction / (this.position === Positions.ROLLING ? 2 : 1);
+                }
 
                 if (this.speedX > 0 && direction === Actions.LEFT
                     || this.speedX <0 && direction === Actions.RIGHT
