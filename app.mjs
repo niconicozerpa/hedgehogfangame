@@ -21,7 +21,6 @@ import { Actions, Positions } from "./character.mjs";
 import { sonicSprites } from "./sprites.mjs";
 
 
-
 async function initGame(isTouchScreen = false) {
 
     const jumpAudio = setupAudioFile(jumpAudioOGG, jumpAudioMP3);
@@ -30,31 +29,25 @@ async function initGame(isTouchScreen = false) {
     const spindashAudio = setupAudioFile(spindashOGG, spindashMP3);
     const spindashReleaseAudio = setupAudioFile(spindashReleaseOGG, spindashReleaseMP3);
 
-    {
-        const musicAudio = document.createElement("audio");
-
-        musicAudio.setAttribute("preload", "auto");
-
-        musicAudio.loop = true;
-        musicAudio.volume = 1;
+    const useOGG = (new Audio()).canPlayType("audio/ogg;codec=vorbis") === "maybe";
+    (async function() {
         
-        const sourceMP3 = document.createElement("source");
-        sourceMP3.setAttribute("type", "audio/mp3");
-        sourceMP3.setAttribute("src", musicMP3);
+        const audioContext = new AudioContext();
+        // Hack to make AudioContext work in Safari
+        audioContext.createGain();
+        
+        const audioBuffer = await fetch(useOGG ? musicOGG : musicMP3).then(r => r.arrayBuffer());
 
-        const sourceOGG = document.createElement("source");
-        sourceOGG.setAttribute("type", "audio/ogg");
-        sourceOGG.setAttribute("src", musicOGG);
+        audioContext.decodeAudioData(audioBuffer, function(buffer) {
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.loop = true;
 
-        musicAudio.append(sourceOGG);
-        document.body.append(musicAudio);
-
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioTrack = audioContext.createMediaElementSource(musicAudio);
-
-        audioTrack.connect(audioContext.destination);
-        musicAudio.play();
-    }
+            source.start(0);
+        
+        });
+    })(); // lelele
 
     const canvas = document.createElement("canvas");
 
@@ -535,36 +528,25 @@ async function initGame(isTouchScreen = false) {
     }
 }
 
+const useOGG = (new Audio()).canPlayType("audio/ogg;codec=vorbis") === "maybe";
 function setupAudioFile(oggFile, mp3File, volume = 1) {
-    const output = document.createElement("audio");
-    {
-        output.setAttribute("preload", "auto");
+    return fetch(useOGG ? oggFile : mp3File).then(r => r.arrayBuffer());
 
-        const sourceMP3 = document.createElement("source");
-        sourceMP3.setAttribute("type", "audio/mp3");
-        sourceMP3.setAttribute("src", mp3File);
-
-        const sourceOGG = document.createElement("source");
-        sourceOGG.setAttribute("type", "audio/ogg");
-        sourceOGG.setAttribute("src", oggFile);
-
-        output.volume = volume;
-
-        output.append(sourceOGG);
-        document.body.append(output);
-
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioTrack = audioContext.createMediaElementSource(output);
-
-
-        audioTrack.connect(audioContext.destination);
-
-        return output;
-    }
 } 
-function playAudioEffect(audioEl) {
-    audioEl.currentTime = 0;
-    audioEl.play();
+function playAudioEffect(audioBuffer) {
+    const audioContext = new AudioContext();
+    // Hack to make AudioContext work in Safari
+    audioContext.createGain();
+
+    audioBuffer.then(audioBuffer => {
+        audioContext.decodeAudioData(audioBuffer.slice(0), function(buffer) {
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            
+            source.start(0);
+        }, function(...args) { console.log(args)});
+    });
 }
 
 
