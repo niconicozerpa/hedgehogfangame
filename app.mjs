@@ -47,7 +47,7 @@ async function initGame(isTouchScreen = false) {
             source.start(0);
         
         });
-    })(); // lelele
+    })();
 
     const canvas = document.createElement("canvas");
 
@@ -68,26 +68,37 @@ async function initGame(isTouchScreen = false) {
 
     const keys = (function() {
         const keys = {};
+        let lastAddedAction = null;
         
         return {
             add(key) {
+                if (!(key in keys)) {
+                    lastAddedAction = key;
+                }
                 keys[key] = Math.floor(Date.now() / 1000);
+                nextFrameAndAudio("comesFromEvent");
             },
             has(key) {
                return typeof keys[key] !== "undefined";
+               nextFrameAndAudio("comesFromEvent");
             },
             delete(key) {
                 delete keys[key];
+                nextFrameAndAudio("comesFromEvent");
             },
             get(key) {
                 return keys[key];
+            },
+            getLastAddedAction() {
+                const output = lastAddedAction;
+                lastAddedAction = null;
+                return output;
             }
         }
     })();
 
 
     const nextGameFrame = G.initGame(keys);
-    
     
     let oldPosition = null;
 
@@ -414,23 +425,23 @@ async function initGame(isTouchScreen = false) {
         switch (event.key) {
             case "ArrowRight":
                 keys.add(Actions.RIGHT);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
             case "ArrowLeft":
                 keys.add(Actions.LEFT);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
             case "ArrowDown":
                 keys.add(Actions.DOWN);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
             case "ArrowUp":
                 keys.add(Actions.UP);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
             case " ":
                 keys.add(Actions.JUMP);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
         }
     });
@@ -439,23 +450,23 @@ async function initGame(isTouchScreen = false) {
         switch (event.key) {
             case "ArrowRight":
                 keys.delete(Actions.RIGHT);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
             case "ArrowLeft":
                 keys.delete(Actions.LEFT);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
             case "ArrowDown":
                 keys.delete(Actions.DOWN);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
             case "ArrowUp":
                 keys.delete(Actions.UP);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
             case " ":
                 keys.delete(Actions.JUMP);
-                nextFrameAndAudio("comesFromEvent");
+                
                 break;
         }
     });
@@ -469,11 +480,11 @@ async function initGame(isTouchScreen = false) {
 
         touchJumpButton.addEventListener("touchstart", function(event) {
             keys.add(Actions.JUMP);
-            nextFrameAndAudio("comesFromEvent");
+            
         });
         touchJumpButton.addEventListener("touchend", function(event) {
             keys.delete(Actions.JUMP);
-            nextFrameAndAudio("comesFromEvent");
+            
         });
 
         document.body.append(touchJumpButton);
@@ -502,28 +513,28 @@ async function initGame(isTouchScreen = false) {
             const keysToAdd = [];
             if (posX <= 40) {
                 keysToAdd.push(Actions.LEFT);
-                nextFrameAndAudio("comesFromEvent");
+                
             }
             if (posX >= 60) {
                 keysToAdd.push(Actions.RIGHT);
-                nextFrameAndAudio("comesFromEvent");
+                
             }
             if (posY <= 40) {
                 keysToAdd.push(Actions.UP);
-                nextFrameAndAudio("comesFromEvent");
+                
             }
             if (posY >= 60) {
                 keysToAdd.push(Actions.DOWN);
-                nextFrameAndAudio("comesFromEvent");
+                
             }
 
             for (const action of [Actions.LEFT, Actions.RIGHT, Actions.UP, Actions.DOWN]) {
                 if (keysToAdd.includes(action)) {
                     keys.add(action);
-                    nextFrameAndAudio("comesFromEvent");
+                    
                 } else {
                     keys.delete(action);
-                    nextFrameAndAudio("comesFromEvent");
+                    
                 }
             }
 
@@ -535,7 +546,7 @@ async function initGame(isTouchScreen = false) {
             event.preventDefault();
             for (const action of [Actions.LEFT, Actions.RIGHT, Actions.UP, Actions.DOWN]) {
                 keys.delete(action);
-                nextFrameAndAudio("comesFromEvent");
+                
             }
         });
 

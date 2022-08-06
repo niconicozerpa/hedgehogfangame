@@ -269,6 +269,8 @@ export class Character {
 
     nextFrame(actions) {
 
+        const lastAddedAction = actions.getLastAddedAction();
+        
         const jumping = actions.has(Actions.JUMP);
 
         let direction = null;
@@ -280,7 +282,7 @@ export class Character {
             direction = Actions.RIGHT;
         }
 
-        if (jumping && this.position !== Positions.JUMPING) {
+        if (jumping && this.position !== Positions.JUMPING && lastAddedAction == Actions.JUMP) {
 
             if (actions.has(Actions.DOWN)) {
                 if (this.speedX === 0 && this.position !== Positions.SPINDASH) {
