@@ -283,7 +283,7 @@ export class Character {
         if (jumping && this.position !== Positions.JUMPING) {
 
             if (actions.has(Actions.DOWN)) {
-                if (this.position !== Positions.SPINDASH) {
+                if (this.speedX === 0 && this.position !== Positions.SPINDASH) {
                     this.position = Positions.SPINDASH;
                     this.spindashCount = -1;
                 }
