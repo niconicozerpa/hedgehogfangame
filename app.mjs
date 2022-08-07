@@ -570,22 +570,36 @@ async function initGame(isTouchScreen = false) {
 }
 
 const useOGG = (new Audio()).canPlayType("audio/ogg;codec=vorbis") === "maybe";
-function setupAudioFile(oggFile, mp3File, volume = 1) {
-    return fetch(useOGG ? oggFile : mp3File).then(r => r.arrayBuffer());
+async function setupAudioFile(oggFile, mp3File, volume = 1) {
+    const fileData = await fetch(useOGG ? oggFile : mp3File);
+    
+    return {
+        key: useOGG ? oggFile : mp3File,
+        buffer: await fileData.arrayBuffer()
+    };
 
 } 
-function playAudioEffect(audioBuffer) {
+const audioSources = {};
+function playAudioEffect(audioObject) {
     const audioContext = new AudioContext();
     // Hack to make AudioContext work in Safari
     audioContext.createGain();
 
-    audioBuffer.then(audioBuffer => {
+    audioObject.then(audioObject => {
+        const audioBuffer = audioObject.buffer;
         audioContext.decodeAudioData(audioBuffer.slice(0), function(buffer) {
+
+            if (audioSources[audioObject.key]) {
+                audioSources[audioObject.key].stop();
+            }
+
             const source = audioContext.createBufferSource();
             source.buffer = buffer;
             source.connect(audioContext.destination);
             
             source.start(0);
+
+            audioSources[audioObject.key] = source;
         });
     });
 }
