@@ -72,19 +72,25 @@ async function initGame(isTouchScreen = false) {
         
         return {
             add(key) {
-                if (!(key in keys)) {
+                let keyWasAlreadyAdded = false;
+                if (key in keys) {
+                    keyWasAlreadyAdded = true;
+                } else {
                     lastAddedAction = key;
                 }
                 keys[key] = Math.floor(Date.now() / 1000);
-                nextFrameAndAudio("comesFromEvent");
+                if (!keyWasAlreadyAdded) {
+                    nextFrameAndAudio("comesFromEvent");
+                }
             },
             has(key) {
                return typeof keys[key] !== "undefined";
-               nextFrameAndAudio("comesFromEvent");
             },
             delete(key) {
-                delete keys[key];
-                nextFrameAndAudio("comesFromEvent");
+                if (key in keys) {
+                    delete keys[key];
+                    nextFrameAndAudio("comesFromEvent");
+                }
             },
             get(key) {
                 return keys[key];
