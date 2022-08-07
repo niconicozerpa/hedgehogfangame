@@ -586,7 +586,7 @@ function playAudioEffect(audioBuffer) {
             source.connect(audioContext.destination);
             
             source.start(0);
-        }, function(...args) { console.log(args)});
+        });
     });
 }
 

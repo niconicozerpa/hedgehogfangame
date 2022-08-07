@@ -93,6 +93,7 @@ export class Character {
     jumpingCollisionPoints;
     lookingTo = null;
     spindashCount = 0;
+    isRollingJump = false;
 
     constructor({
         x, y,
@@ -275,21 +276,24 @@ export class Character {
 
         let direction = null;
 
-        if (actions.has(Actions.LEFT)) {
-            direction = Actions.LEFT;
-        }
-        if (actions.has(Actions.RIGHT)) {
-            direction = Actions.RIGHT;
+        if (!(this.position === Positions.JUMPING && this.isRollingJump)) {
+            if (actions.has(Actions.LEFT)) {
+                direction = Actions.LEFT;
+            }
+            if (actions.has(Actions.RIGHT)) {
+                direction = Actions.RIGHT;
+            }
         }
 
         if (jumping && this.position !== Positions.JUMPING && lastAddedAction == Actions.JUMP) {
 
             if (actions.has(Actions.DOWN)) {
-                if (this.speedX === 0 && this.position !== Positions.SPINDASH) {
+                if (Math.abs(this.speedX) < 0.5 && this.position !== Positions.SPINDASH) {
                     this.position = Positions.SPINDASH;
                     this.spindashCount = -1;
                 }
             } else {
+                this.isRollingJump = this.position == Positions.ROLLING;
                 this.position = Positions.JUMPING;
                 this.speedY -= this.jumpForce;
             }
@@ -322,13 +326,16 @@ export class Character {
 
                 let friction;
                 if (this.position === Positions.JUMPING) {
-                    friction = 0;
+                    if (this.speedY < 0 && this.speedY > -4) {
+                        friction = Math.abs(this.speedX) / 0.125 / 256;
+                    } else {
+                        friction = 0;
+                    }
                 } else {
                     friction = this.friction / (this.position === Positions.ROLLING ? 2 : 1);
                 }
-
                 if (this.speedX > 0 && direction === Actions.LEFT
-                    || this.speedX <0 && direction === Actions.RIGHT
+                    || this.speedX < 0 && direction === Actions.RIGHT
                 ) {
                     friction += this.rollDecel;
                 }
