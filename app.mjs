@@ -603,6 +603,12 @@ function playAudioEffect(audioObject) {
             source.buffer = buffer;
             source.connect(audioContext.destination);
             
+            source.addEventListener("ended", function() {
+                audioContext.close();
+                if (audioSources[audioObject.key] === source) {
+                    delete audioSources[audioObject.key];
+                }
+            });
             source.start(0);
 
             audioSources[audioObject.key] = source;
